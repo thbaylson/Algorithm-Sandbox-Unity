@@ -10,8 +10,8 @@ namespace Testing.ObjectPool
     /// </summary>
     public class ObjectPool : MonoBehaviour
     {
-        [SerializeField] private Poolable objectPrefab;
-        [SerializeField] private List<Poolable> objects;
+        [SerializeField] private ImmortalPoolable objectPrefab;
+        [SerializeField] public List<ImmortalPoolable> Objects {  get; private set; }
 
         [Header("Settings")]
         [SerializeField] private int maxNumObjects = 5;
@@ -19,20 +19,25 @@ namespace Testing.ObjectPool
 
         private void Start()
         {
-            objects = new();
+            Objects = new();
         }
 
-        public void InstantiateObject()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public ImmortalPoolable InstantiateObject()
         {
             // Cache this value bc we'll need it a few times
-            int objectCount = objects.Count();
+            int objectCount = Objects.Count();
 
             // Check to see if we have an available object that's already instantiated but marked inactive
-            Poolable availableObject = objects.Where(obj => obj.GetStatus().Equals(PoolableStatus.Inactive)).FirstOrDefault();
+            ImmortalPoolable availableObject = Objects.Where(obj => obj.GetStatus().Equals(PoolableStatus.Inactive)).FirstOrDefault();
             if (availableObject != null)
             {
                 // We have an available object, so let's activate it
                 availableObject.SetStatus(PoolableStatus.Active);
+                return null;
             }
             else
             {
@@ -40,7 +45,7 @@ namespace Testing.ObjectPool
                 if (objectCount < maxNumObjects)
                 {
                     // The pool isn't full, so let's instantiate a new one and put it in the pool
-                    Poolable newObject = Instantiate(
+                    ImmortalPoolable newObject = Instantiate(
                         objectPrefab,
                         new Vector3(
                             objectCount * objectOffset.x,
@@ -50,7 +55,9 @@ namespace Testing.ObjectPool
 
                     newObject.transform.parent = transform;
                     newObject.name = $"{objectPrefab.name} {objectCount}";
-                    objects.Add(newObject);
+                    Objects.Add(newObject);
+
+                    return newObject;
                 }
                 else
                 {
@@ -59,6 +66,7 @@ namespace Testing.ObjectPool
                      *  various ways to handle this case. We could create a queue of objects waiting to be instantiated,
                      *  log an error message, or simply do nothing at all.
                      */
+                    return null;
                 }
             }
         }
