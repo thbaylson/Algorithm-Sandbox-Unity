@@ -10,6 +10,7 @@ namespace Testing.ObjectPool
     /// </summary>
     public class ObjectPool : MonoBehaviour
     {
+        // TODO: Figure out how to switch between poolable types. Maybe generics? A Factory?
         [SerializeField] private ImmortalPoolable objectPrefab;
         [SerializeField] public List<ImmortalPoolable> Objects {  get; private set; }
 

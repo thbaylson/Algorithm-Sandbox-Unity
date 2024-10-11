@@ -24,8 +24,11 @@ public class FunctionalMovementController : MonoBehaviour
             if (objMover != null)
             {
                 objMover.SetFunction(FunctionOfTime.Circle);
-                objMover.PlaceAtInitialPosition();
+                // This ensures that objects don't overlap due to spawnrate being a factor of their period
+                objMover.SetMoveSpeed(maxObjects+1);
+                //objMover.SetRadius(maxObjects);
                 objMover.SetIsMoving(true);
+                objMover.PlaceAtInitialPosition();
 
                 if(period == 0f)
                     period = objMover.Period;
