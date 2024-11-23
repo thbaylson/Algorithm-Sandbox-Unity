@@ -7,7 +7,7 @@ using UnityEngine.Tilemaps;
 public class TilemapGridManager : MonoBehaviour
 {
     [SerializeField]
-    RuleTile[] ruleTiles;
+    Tilemap exampleTilemap;
 
     [SerializeField]
     int width;//35
@@ -29,7 +29,10 @@ public class TilemapGridManager : MonoBehaviour
         _tilemap = new GameObject("Tilemap").AddComponent<Tilemap>();
         _tilemap.AddComponent<TilemapRenderer>();
         _tilemap.transform.SetParent(_grid.transform);
+        //_tilemap = Instantiate(exampleTilemap, _grid.transform);
 
+        exampleTilemap.CompressBounds();
+        //exampleTilemap.origin = new Vector3Int(0, 0, 0);
         PopulateTilemap(_tilemap);
     }
 
@@ -38,7 +41,7 @@ public class TilemapGridManager : MonoBehaviour
         tilemap.ClearAllTiles();
 
         // Populate the Tilemap
-        var tiles = WaveFunctionCollapse.GenerateTileArray(width, height, ruleTiles);
+        var tiles = WaveFunctionCollapse.GenerateSpriteArray(width, height, exampleTilemap);
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < height; j++)

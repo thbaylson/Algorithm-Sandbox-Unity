@@ -11,28 +11,20 @@ using UnityEngine.Tilemaps;
  */
 public static class WaveFunctionCollapse
 {
-    private class WaveCell
+    private static Dictionary<string, Dictionary<Direction, HashSet<string>>> Constraints;
+
+    // Reusable directions array for 8 directions
+    private static readonly int[][] directions = new int[][]
     {
-        public WaveCell(int x, int y, TileBase[] possibleTiles)
-        {
-            this.possibleTiles = possibleTiles;
-            this.x = x;
-            this.y = y;
-            collapsed = false;
-        }
-
-        public int GetEntropy()
-        {
-            if(possibleTiles == null) return 0;
-            return possibleTiles.Length;
-        }
-
-        public TileBase tile;
-        public TileBase[] possibleTiles;
-        public int x;
-        public int y;
-        public bool collapsed;
-    }
+        new int[] { 0, 1 },  // Up
+        new int[] { 0, -1 }, // Down
+        new int[] { -1, 0 }, // Left
+        new int[] { 1, 0 },  // Right
+        new int[] { -1, 1 }, // TopLeft
+        new int[] { 1, 1 },  // TopRight
+        new int[] { -1, -1 }, // BottomLeft
+        new int[] { 1, -1 }  // BottomRight
+    };
 
     /// <summary>
     /// Returns an n x m grid of procedurally chosen tiles. Uses WFC to determine logical tile arrangement.
@@ -40,10 +32,13 @@ public static class WaveFunctionCollapse
     /// <param name="n"></param>
     /// <param name="m"></param>
     /// <param name="ruleTiles"></param>
-    public static TileBase[][] GenerateTileArray(int n, int m, RuleTile[] ruleTiles)
+    public static TileBase[][] GenerateSpriteArray(int n, int m, Tilemap exampleTilemap)
     {
-        WaveCell[][] waveArray = GenerateWaveArray(n, m, ruleTiles);
-        
+        Constraints = BuildAdjacencyConstraints(exampleTilemap);
+
+        string[] possibleSprites = Constraints.Keys.ToArray();
+        WaveCell[][] waveArray = GenerateWaveArray(n, m, possibleSprites);
+
         Stack<WaveCell> cells = new Stack<WaveCell>();
         var newLowest = GetLowestEntropyCell(n, m, waveArray);
         if (newLowest != null)
@@ -52,11 +47,11 @@ public static class WaveFunctionCollapse
         }
 
         int cnt = 0; // Quick and dirty stopping condition
-        int maxCnt = 10000;
+        int maxCnt = 1000;
         while (cells.Count > 0 && cnt < maxCnt)
         {
             WaveCell currentCell = cells.Pop();
-            CollapseWaveCell(currentCell, ruleTiles, waveArray);
+            CollapseWaveCell(currentCell, waveArray);
 
             // Push new lowest entropy onto the stack
             newLowest = GetLowestEntropyCell(n, m, waveArray);
@@ -72,7 +67,27 @@ public static class WaveFunctionCollapse
             Debug.Log("Stopped due to count safeguard");
         }
 
-        return waveArray.Select(cols => cols.Select(cell => cell.tile).ToArray()).ToArray();
+        // Create a new TileBase array to store the generated tile arrangement
+        TileBase[][] result = new TileBase[n][];
+        for (int i = 0; i < n; i++)
+        {
+            result[i] = new TileBase[m];
+            for (int j = 0; j < m; j++)
+            {
+                string spriteName = waveArray[i][j].sprite;
+                result[i][j] = GetTileByName(exampleTilemap, spriteName);
+            }
+        }
+
+        // Flip the result array vertically to correct the vertical axis order
+        //for (int i = 0; i < n / 2; i++)
+        //{
+        //    var temp = result[i];
+        //    result[i] = result[n - i - 1];
+        //    result[n - i - 1] = temp;
+        //}
+
+        return result;
     }
 
     private static WaveCell GetLowestEntropyCell(int n, int m, WaveCell[][] waveArray)
@@ -111,186 +126,208 @@ public static class WaveFunctionCollapse
         return null;
     }
 
-    private static void CollapseWaveCell(WaveCell currentCell, RuleTile[] ruleTiles, WaveCell[][] waveArray)
+    // Generate wave array
+    private static WaveCell[][] GenerateWaveArray(int n, int m, string[] possibleSprites)
     {
+        WaveCell[][] waveArray = new WaveCell[n][];
+        for (int i = 0; i < n; i++)
+        {
+            waveArray[i] = new WaveCell[m];
+            for (int j = 0; j < m; j++)
+            {
+                waveArray[i][j] = new WaveCell(i, j, possibleSprites);
+            }
+        }
+
+        return waveArray;
+    }
+
+    private static void CollapseWaveCell(WaveCell currentCell, WaveCell[][] waveArray)
+    {
+        // Filter possible sprites based on constraints from neighboring cells
+        List<string> validSprites = new List<string>(currentCell.possibleSprites);
+
+        foreach (var dir in directions)
+        {
+            int newX = currentCell.x + dir[0];
+            int newY = currentCell.y + dir[1];
+
+            if (newX >= 0 && newX < waveArray.Length && newY >= 0 && newY < waveArray[0].Length && waveArray[newX][newY].collapsed)
+            {
+                string neighborSprite = waveArray[newX][newY].sprite;
+                Direction direction = GetDirection(currentCell.x, currentCell.y, newX, newY);
+                validSprites = validSprites.Intersect(Constraints[neighborSprite][direction]).ToList();// This is overwritten with each iteration.
+            }
+        }
+
+        if (validSprites.Count == 0)
+        {
+            Debug.LogError("No valid sprites found for cell at (" + currentCell.x + ", " + currentCell.y + ")");
+            return;
+        }
+
         // Determine what this cell is allowed to be based on possibilities and weights
-        currentCell.tile = currentCell.possibleTiles[UnityEngine.Random.Range(0, currentCell.possibleTiles.Length)];
+        currentCell.sprite = validSprites[UnityEngine.Random.Range(0, validSprites.Count)];
 
         // The cell has been determined, there are no more possibilities
-        currentCell.possibleTiles = null;
+        currentCell.possibleSprites = null;
 
         // Collapse the cell
         currentCell.collapsed = true;
 
         // Update neighbors' entropies
-        PropagateConstraints(currentCell, ruleTiles, waveArray);
-    }
-
-    // Generate wave array
-    private static WaveCell[][] GenerateWaveArray(int n, int m, TileBase[] possibleTiles)
-    {
-        WaveCell[][] tileBases = new WaveCell[n][];
-        for (int i = 0; i < n; i++)
-        {
-            tileBases[i] = new WaveCell[m];
-            for (int j = 0; j < m; j++)
-            {
-                tileBases[i][j] = new WaveCell(i, j, possibleTiles);
-            }
-        }
-
-        return tileBases;
+        PropagateConstraints(currentCell, waveArray);
     }
 
     // Adjacency constraint propagation
-    private static void PropagateConstraints(WaveCell currentCell, RuleTile[] ruleTiles, WaveCell[][] waveArray)
+    private static void PropagateConstraints(WaveCell currentCell, WaveCell[][] waveArray)
     {
-        // Check the rule's neighbors and update the entropies of neighboring cells
-        for (int i = currentCell.x - 1; i <= currentCell.x + 1; i++)
+        foreach (var dir in directions)
         {
-            for (int j = currentCell.y - 1; j <= currentCell.y + 1; j++)
+            int newX = currentCell.x + dir[0];
+            int newY = currentCell.y + dir[1];
+
+            if (newX >= 0 && newX < waveArray.Length && newY >= 0 && newY < waveArray[0].Length && !waveArray[newX][newY].collapsed)
             {
-                if (i >= 0 && i < waveArray.Length && j >= 0 && j < waveArray[0].Length && !waveArray[i][j].collapsed)
-                {
-                    // Update the entropy of the neighboring cell based on the rule
-                    UpdateEntropy(waveArray[i][j], waveArray, currentCell);
-                }
+                UpdateEntropy(waveArray[newX][newY], waveArray, currentCell);
             }
         }
     }
 
     private static void UpdateEntropy(WaveCell neighborCell, WaveCell[][] waveArray, WaveCell currentCell)
     {
-        if (neighborCell.possibleTiles == null)
+        if (neighborCell.possibleSprites == null)
         {
             return;
         }
 
-        // Collect constraints from all neighboring cells
-        HashSet<TileType> allowedTileTypes = new HashSet<TileType>(Enum.GetValues(typeof(TileType)).Cast<TileType>());
-        for (int i = neighborCell.x - 1; i <= neighborCell.x + 1; i++)
+        HashSet<string> allowedSprites = new HashSet<string>(neighborCell.possibleSprites);
+
+        foreach (var dir in directions)
         {
-            for (int j = neighborCell.y - 1; j <= neighborCell.y + 1; j++)
+            int newX = neighborCell.x + dir[0];
+            int newY = neighborCell.y + dir[1];
+
+            if (newX >= 0 && newX < waveArray.Length && newY >= 0 && newY < waveArray[0].Length && waveArray[newX][newY].collapsed)
             {
-                if (i >= 0 && i < waveArray.Length && j >= 0 && j < waveArray[0].Length && waveArray[i][j].collapsed)
-                {
-                    TileType neighborTileType = GetTileType(waveArray[i][j].tile);
-                    Direction direction = GetDirection(neighborCell.x, neighborCell.y, i, j);
-                    List<TileType> neighborConstraints = TileConstraints.AdjacencyConstraints[neighborTileType][direction];
-                    allowedTileTypes.IntersectWith(neighborConstraints);
-                }
+                string neighborSprite = waveArray[newX][newY].sprite;
+                Direction direction = GetDirection(neighborCell.x, neighborCell.y, newX, newY);
+                allowedSprites.IntersectWith(Constraints[neighborSprite][direction]);
             }
         }
 
-        // Filter possible tiles based on the combined constraints
-        List<TileBase> newPossibleTiles = new List<TileBase>();
-        foreach (TileBase possibleTile in neighborCell.possibleTiles)
-        {
-            TileType possibleTileType = GetTileType(possibleTile);
-            if (allowedTileTypes.Contains(possibleTileType))
-            {
-                newPossibleTiles.Add(possibleTile);
-            }
-        }
-
-        neighborCell.possibleTiles = newPossibleTiles.ToArray();
+        neighborCell.possibleSprites = allowedSprites.ToArray();
     }
 
-    private static TileType GetTileType(TileBase tile)
+    private static Dictionary<string, Dictionary<Direction, HashSet<string>>> BuildAdjacencyConstraints(Tilemap exampleTilemap)
     {
-        if (tile.name.Contains("Ground"))
+        var adjacencyConstraints = new Dictionary<string, Dictionary<Direction, HashSet<string>>>();
+        BoundsInt bounds = exampleTilemap.cellBounds;
+        Debug.Log("Bounds: " + bounds.xMin + ", " + bounds.xMax + ", " + bounds.yMin + ", " + bounds.yMax);
+        for (int x = bounds.xMin; x <= bounds.xMax; x++)
         {
-            return TileType.Ground;
-        }
-        else if (tile.name.Contains("Wall"))
-        {
-            return TileType.Wall;
-        }
-        else if (tile.name.Contains("Water"))
-        {
-            return TileType.Water;
+            for (int y = bounds.yMin; y <= bounds.yMax; y++)
+            {
+                TileBase centerTile = exampleTilemap.GetTile(new Vector3Int(x, y, 0));
+                Debug.Log("Center tile: " + centerTile);
+                if (centerTile == null) continue;
+
+                string centerTileName = centerTile.name;
+
+                if (!adjacencyConstraints.ContainsKey(centerTileName))
+                {
+                    adjacencyConstraints[centerTileName] = new Dictionary<Direction, HashSet<string>>();
+                    foreach (Direction dir in Enum.GetValues(typeof(Direction)))
+                    {
+                        adjacencyConstraints[centerTileName][dir] = new HashSet<string>();
+                    }
+                }
+
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.Up, exampleTilemap.GetTile(new Vector3Int(x, y + 1, 0))?.name);
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.Down, exampleTilemap.GetTile(new Vector3Int(x, y - 1, 0))?.name);
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.Left, exampleTilemap.GetTile(new Vector3Int(x - 1, y, 0))?.name);
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.Right, exampleTilemap.GetTile(new Vector3Int(x + 1, y, 0))?.name);
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.TopLeft, exampleTilemap.GetTile(new Vector3Int(x - 1, y + 1, 0))?.name);
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.TopRight, exampleTilemap.GetTile(new Vector3Int(x + 1, y + 1, 0))?.name);
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.BottomLeft, exampleTilemap.GetTile(new Vector3Int(x - 1, y - 1, 0))?.name);
+                AddConstraint(adjacencyConstraints, centerTileName, Direction.BottomRight, exampleTilemap.GetTile(new Vector3Int(x + 1, y - 1, 0))?.name);
+            }
         }
 
-        return TileType.Ground; // Default type
+        return adjacencyConstraints;
+    }
+
+    private static void AddConstraint(Dictionary<string, Dictionary<Direction, HashSet<string>>> constraints, string centerTileName, Direction direction, string adjacentTileName)
+    {
+        if (adjacentTileName != null)
+        {
+            constraints[centerTileName][direction].Add(adjacentTileName);
+        }
     }
 
     private static Direction GetDirection(int x1, int y1, int x2, int y2)
     {
         if (x1 == x2 && y1 == y2 - 1) return Direction.Up;
         if (x1 == x2 && y1 == y2 + 1) return Direction.Down;
-        if (x1 == x2 - 1 && y1 == y2) return Direction.Right;
-        if (x1 == x2 + 1 && y1 == y2) return Direction.Left;
-        if (x1 == x2 - 1 && y1 == y2 - 1) return Direction.TopRight;
-        if (x1 == x2 + 1 && y1 == y2 - 1) return Direction.TopLeft;
-        if (x1 == x2 - 1 && y1 == y2 + 1) return Direction.BottomRight;
-        if (x1 == x2 + 1 && y1 == y2 + 1) return Direction.BottomLeft;
+        if (x1 == x2 - 1 && y1 == y2) return Direction.Left;
+        if (x1 == x2 + 1 && y1 == y2) return Direction.Right;
+        if (x1 == x2 - 1 && y1 == y2 + 1) return Direction.TopLeft;
+        if (x1 == x2 + 1 && y1 == y2 + 1) return Direction.TopRight;
+        if (x1 == x2 - 1 && y1 == y2 - 1) return Direction.BottomLeft;
+        if (x1 == x2 + 1 && y1 == y2 - 1) return Direction.BottomRight;
 
         throw new ArgumentException("Invalid direction");
     }
-}
 
-public enum TileType
-{
-    Empty,
-    Ground,
-    Wall,
-    Water,
-}
-public enum Direction
-{
-    Up,
-    Down,
-    Left,
-    Right,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight
-}
-
-public static class TileConstraints
-{
-    public static Dictionary<TileType, Dictionary<Direction, List<TileType>>> AdjacencyConstraints = new Dictionary<TileType, Dictionary<Direction, List<TileType>>>()
+    // Helper method to get a TileBase by its name from the example Tilemap
+    private static TileBase GetTileByName(Tilemap tilemap, string name)
     {
-        { TileType.Empty, new Dictionary<Direction, List<TileType>> {
-            { Direction.Up, new List<TileType> { TileType.Empty } },
-            { Direction.Down, new List<TileType> { TileType.Empty } },
-            { Direction.Left, new List<TileType> { TileType.Empty } },
-            { Direction.Right, new List<TileType> { TileType.Empty } },
-            { Direction.TopLeft, new List<TileType> { TileType.Empty } },
-            { Direction.TopRight, new List<TileType> { TileType.Empty } },
-            { Direction.BottomLeft, new List<TileType> { TileType.Empty } },
-            { Direction.BottomRight, new List<TileType> { TileType.Empty } }
-        }},
-        { TileType.Ground, new Dictionary<Direction, List<TileType>> {
-            { Direction.Up, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } },
-            { Direction.Down, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } },
-            { Direction.Left, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } },
-            { Direction.Right, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } },
-            { Direction.TopLeft, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } },
-            { Direction.TopRight, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } },
-            { Direction.BottomLeft, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } },
-            { Direction.BottomRight, new List<TileType> { TileType.Ground, TileType.Wall, TileType.Water } }
-        }},
-        { TileType.Wall, new Dictionary<Direction, List<TileType>> {
-            { Direction.Up, new List<TileType> { TileType.Wall, TileType.Ground } },
-            { Direction.Down, new List<TileType> { TileType.Wall, TileType.Ground } },
-            { Direction.Left, new List<TileType> { TileType.Wall, TileType.Ground } },
-            { Direction.Right, new List<TileType> { TileType.Wall, TileType.Ground } },
-            { Direction.TopLeft, new List<TileType> { TileType.Wall, TileType.Ground } },
-            { Direction.TopRight, new List<TileType> { TileType.Wall, TileType.Ground } },
-            { Direction.BottomLeft, new List<TileType> { TileType.Wall, TileType.Ground } },
-            { Direction.BottomRight, new List<TileType> { TileType.Wall, TileType.Ground } }
-        }},
-        { TileType.Water, new Dictionary<Direction, List<TileType>> {
-            { Direction.Up, new List<TileType> { TileType.Water, TileType.Ground } },
-            { Direction.Down, new List<TileType> { TileType.Water, TileType.Ground } },
-            { Direction.Left, new List<TileType> { TileType.Water, TileType.Ground } },
-            { Direction.Right, new List<TileType> { TileType.Water, TileType.Ground } },
-            { Direction.TopLeft, new List<TileType> { TileType.Water, TileType.Ground } },
-            { Direction.TopRight, new List<TileType> { TileType.Water, TileType.Ground } },
-            { Direction.BottomLeft, new List<TileType> { TileType.Water, TileType.Ground } },
-            { Direction.BottomRight, new List<TileType> { TileType.Water, TileType.Ground } }
-        }}
-    };
+        BoundsInt bounds = tilemap.cellBounds;
+        TileBase[] allTiles = tilemap.GetTilesBlock(bounds);
+
+        foreach (TileBase tile in allTiles)
+        {
+            if (tile != null && tile.name == name)
+            {
+                return tile;
+            }
+        }
+
+        return null;
+    }
+
+    private class WaveCell
+    {
+        public WaveCell(int x, int y, string[] possibleSprites)
+        {
+            this.possibleSprites = possibleSprites;
+            this.x = x;
+            this.y = y;
+            collapsed = false;
+        }
+
+        public int GetEntropy()
+        {
+            if (possibleSprites == null) return 0;
+            return possibleSprites.Length;
+        }
+
+        public string sprite;
+        public string[] possibleSprites;
+        public int x;
+        public int y;
+        public bool collapsed;
+    }
+
+    public enum Direction
+    {
+        Up,
+        Down,
+        Left,
+        Right,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight
+    }
 }
