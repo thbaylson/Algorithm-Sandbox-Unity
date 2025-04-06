@@ -24,6 +24,15 @@ namespace Testing.ObjectPool
         }
 
         /// <summary>
+        /// Override of InstantiateObject() with void return type. This is necessary for use with Buttons.
+        /// </summary>
+        /// <returns></returns>
+        public void InstantiateObjectAndForget()
+        {
+            InstantiateObject();
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>

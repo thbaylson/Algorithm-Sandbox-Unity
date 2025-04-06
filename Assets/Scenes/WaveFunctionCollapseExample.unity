@@ -240,6 +240,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c07b8a592ed36944a7abd433b97b9aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  exampleTilemap: {fileID: 3258771671662322782, guid: add45bc084da8d24080759ce9574c9ee, type: 3}
   width: 60
   height: 35
 --- !u!4 &758482216
