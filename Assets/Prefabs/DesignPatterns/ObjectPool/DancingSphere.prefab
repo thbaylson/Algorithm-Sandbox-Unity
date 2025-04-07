@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 606873023725630271}
   - component: {fileID: 5114748711434675451}
   - component: {fileID: -5422777824251474714}
+  - component: {fileID: 520526018374485774}
   m_Layer: 0
   m_Name: DancingSphere
   m_TagString: Untagged
@@ -134,9 +135,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34a9211910aaa904aa6707c488da7efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _moveSpeed: 7
-  _radius: 1
-  _isMoving: 0
+  movementFunction: {fileID: 0}
+  moveSpeed: 5
+  radius: 2
+  isMoving: 0
 --- !u!96 &-5422777824251474714
 TrailRenderer:
   serializedVersion: 3
@@ -243,3 +245,15 @@ TrailRenderer:
   m_Autodestruct: 0
   m_Emitting: 1
   m_ApplyActiveColorSpace: 1
+--- !u!114 &520526018374485774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4909880581647072877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1175d96202491f4e8153db80173d057, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

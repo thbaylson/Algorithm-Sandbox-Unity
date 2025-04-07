@@ -16,6 +16,7 @@ namespace Testing.ObjectPool
 
         [Header("Settings")]
         [SerializeField] private int maxNumObjects = 5;
+        // This setting doesn't do anything with FunctionalMover, since the positions are being calculated and set directly.
         [SerializeField] private Vector3 objectOffset = Vector3.zero;
 
         private void Start()

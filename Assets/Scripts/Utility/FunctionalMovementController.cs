@@ -9,6 +9,9 @@ public class FunctionalMovementController : MonoBehaviour
     [SerializeField] private ObjectPool _objectPool;
     [SerializeField] private int maxObjects;
 
+    // New field for the movement function ScriptableObject.
+    [SerializeField] private MovementFunction movementFunctionAsset;
+
     private void Start()
     {
         StartCoroutine(SpawnObjectsRoutine());
@@ -23,10 +26,10 @@ public class FunctionalMovementController : MonoBehaviour
             FunctionalMover objMover = obj.GetComponent<FunctionalMover>();
             if (objMover != null)
             {
-                objMover.SetFunction(FunctionOfTime.Circle);
-                // This ensures that objects don't overlap due to spawnrate being a factor of their period
+                objMover.SetMovementFunction(movementFunctionAsset);
+                // TODO: Find a better way of setting speed.
+                //  Currently, adding more than a few objects makes the speed way too high.
                 objMover.SetMoveSpeed(maxObjects+1);
-                //objMover.SetRadius(maxObjects);
                 objMover.SetIsMoving(true);
                 objMover.PlaceAtInitialPosition();
 

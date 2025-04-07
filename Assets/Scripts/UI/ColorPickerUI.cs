@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class ColorPickerUI : MonoBehaviour
 {
     private GameObject gObject;
-    private Color sliderColor = new Color(0f, 0f, 0f, 1f);
+    private Color sliderColor = new Color(1f, 1f, 1f, 1f);
 
     public void OnToggleGroupChanged(Toggle toggle)
     {

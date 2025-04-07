@@ -1,41 +1,37 @@
-using System;
 using UnityEngine;
 
 public class FunctionalMover : MonoBehaviour
 {
     public float Period { get; private set; }
 
-    [SerializeField] private Func<float, float, (float, float)> _function;
+    // Reference to a ScriptableObject implementing the movement logic.
+    [SerializeField] private MovementFunction movementFunction;
+
     [SerializeField] private float _moveSpeed = 5f;
     [SerializeField] private float _radius = 2f;
     [SerializeField] private bool _isMoving = false;
-    
+
     private float _age = 0f;
 
     private void FixedUpdate()
     {
-        if (_isMoving)
+        if (_isMoving && movementFunction != null)
         {
-            // This will reset the age timer every period to prevent data type overflow
-            _age = (_age + (Time.deltaTime * _moveSpeed)) % Period;
+            // Update the age and wrap it around the period.
+            // TODO: Move age logic out of this completely. ObjectPool should handle age. This will also fix SpiralMovement.
+            _age = (_age + Time.deltaTime * _moveSpeed) % Period;
 
-            // TODO: It would be better to make this velocity based instead of position based
-            (float, float) newPos = _function.Invoke(_radius, _age);
-            transform.localPosition = new Vector3(newPos.Item1, newPos.Item2);
+            Vector2 newPos = movementFunction.ComputePosition(_radius, _age);
+            transform.localPosition = new Vector3(newPos.x, newPos.y, transform.localPosition.z);
         }
     }
 
     // Set Function
-    public void SetFunction(Func<float, float, (float, float)> function)
+    public void SetMovementFunction(MovementFunction function)
     {
-        _function = function;
-
-        if(_function == FunctionOfTime.Circle)
-        {
-            // The period of an object is the length of time required for one complete rotation of a circle. It is equal to
-            // circumference divided by speed.
-            Period = 2 * (float)Math.PI * _radius;
-        }
+        movementFunction = function;
+        if (movementFunction != null)
+            Period = movementFunction.GetPeriod(_radius);
     }
 
     public void SetMoveSpeed(float speed)
@@ -57,15 +53,10 @@ public class FunctionalMover : MonoBehaviour
     // Place the object at its initial position. This prevents objects spawning at the origin and then jumping to their position
     public void PlaceAtInitialPosition()
     {
-        (float, float) newPos = _function.Invoke(_radius, 0f);
-        transform.localPosition = new Vector3(newPos.Item1, newPos.Item2);
-    }
-}
-
-public class FunctionOfTime
-{
-    public static (float, float) Circle(float radius, float time)
-    {
-        return (radius * (float)Math.Cos(time), radius * (float)Math.Sin(time));
+        if (movementFunction != null)
+        {
+            Vector2 newPos = movementFunction.ComputePosition(_radius, 0f);
+            transform.localPosition = new Vector3(newPos.x, newPos.y, transform.localPosition.z);
+        }
     }
 }
