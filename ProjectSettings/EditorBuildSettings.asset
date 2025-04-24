@@ -17,5 +17,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SphereDanceExample.unity
     guid: 6be8122e2491be1438e70d1d68c5ec07
+  - enabled: 1
+    path: Assets/Scenes/DOTS_Example.unity
+    guid: ab18e49b11f700144bd84ed33e123fe6
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

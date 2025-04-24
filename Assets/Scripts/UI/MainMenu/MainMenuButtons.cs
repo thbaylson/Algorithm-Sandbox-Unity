@@ -10,6 +10,7 @@ public class MainMenuButtons : MonoBehaviour
         ObjectPoolExample,
         ColorPickerUIExample,
         SphereDanceExample,
+        DOTS_Example
     }
 
     public void LoadObjectPoolScene()
@@ -25,5 +26,10 @@ public class MainMenuButtons : MonoBehaviour
     public void LoadColorPickerScene()
     {
         SceneManager.LoadScene((int)Scenes.ColorPickerUIExample);
+    }
+
+    public void LoadDOTSExampleScene()
+    {
+        SceneManager.LoadScene((int)Scenes.DOTS_Example);
     }
 }
