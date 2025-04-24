@@ -14,13 +14,13 @@ public partial class SpawnEntitiesSystem : SystemBase
     protected override void OnUpdate()
     {
         // Spawn Entities when the space key is pressed.
-        if (!Input.GetKey(KeyCode.Space)) return;
+        if (!Input.GetKeyDown(KeyCode.Space)) return;
 
         SpawnEntitiesConfig config = SystemAPI.GetSingleton<SpawnEntitiesConfig>();
         RotateSpeed rotateSpeedRef = EntityManager.GetComponentData<RotateSpeed>(config.prefabEntity);
 
         EntityCommandBuffer entityCommandBuffer = new EntityCommandBuffer(WorldUpdateAllocator);
-        foreach (var localTransformRef in SystemAPI.Query<RefRO<LocalTransform>>().WithAny<SpawnEntitiesConfig>())
+        foreach (var localTransformRef in SystemAPI.Query<RefRO<LocalTransform>>())
         {
             Entity spawnedEntity = entityCommandBuffer.Instantiate(config.prefabEntity);
 
@@ -45,7 +45,7 @@ public partial class SpawnEntitiesSystem : SystemBase
                 {
                     x = Random.Range(-1f, 1f),
                     y = Random.Range(-1f, 1f),
-                    z = Random.Range(-1f, 1f)
+                    z = Random.Range(0.01f, 1f)
                 }
             });
         }
