@@ -6,13 +6,11 @@ using UnityEngine;
 public struct SpawnEntitiesConfig : IComponentData
 {
     public Entity prefabEntity;
-    public int amount;
 }
 
 public class SpawnEntitiesConfigAuthoring : MonoBehaviour
 {
     public GameObject prefab;
-    public int amount;
 
     public class Baker : Baker<SpawnEntitiesConfigAuthoring>
     {
@@ -24,7 +22,6 @@ public class SpawnEntitiesConfigAuthoring : MonoBehaviour
             AddComponent(entity, new SpawnEntitiesConfig
             {
                 prefabEntity = GetEntity(authoring.prefab, TransformUsageFlags.Dynamic),
-                amount = authoring.amount
             });
         }
     }

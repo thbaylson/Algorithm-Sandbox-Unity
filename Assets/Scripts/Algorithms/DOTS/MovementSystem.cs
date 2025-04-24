@@ -6,6 +6,11 @@ using UnityEngine;
 
 public partial struct MovementSystem : ISystem
 {
+    public void OnCreate(ref SystemState state)
+    {
+        state.RequireForUpdate<Movement>();
+    }
+
     public void OnUpdate(ref SystemState state)
     {
         // It's considered a good practice to test with SystemAPI.Query before creating a job.
