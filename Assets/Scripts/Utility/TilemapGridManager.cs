@@ -6,14 +6,9 @@ using UnityEngine.Tilemaps;
 
 public class TilemapGridManager : MonoBehaviour
 {
-    [SerializeField]
-    Tilemap exampleTilemap;
-
-    [SerializeField]
-    int width;//35
-
-    [SerializeField]
-    int height;//18
+    [SerializeField] Tilemap exampleTilemap;
+    [SerializeField] int width;
+    [SerializeField] int height;
 
     private Grid _grid;
     private Tilemap _tilemap;
