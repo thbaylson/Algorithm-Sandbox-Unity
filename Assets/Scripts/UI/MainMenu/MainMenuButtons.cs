@@ -10,7 +10,8 @@ public class MainMenuButtons : MonoBehaviour
         ObjectPoolExample,
         ColorPickerUIExample,
         SphereDanceExample,
-        DOTS_Example
+        DOTS_Example,
+        WaveFunctionCollapseExample,
     }
 
     public void LoadObjectPoolScene()
@@ -31,5 +32,10 @@ public class MainMenuButtons : MonoBehaviour
     public void LoadDOTSExampleScene()
     {
         SceneManager.LoadScene((int)Scenes.DOTS_Example);
+    }
+
+    public void LoadWaveFunctionCollapseScene()
+    {
+        SceneManager.LoadScene((int)Scenes.WaveFunctionCollapseExample);
     }
 }

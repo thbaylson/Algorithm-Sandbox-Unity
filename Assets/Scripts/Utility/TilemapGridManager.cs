@@ -7,6 +7,7 @@ using UnityEngine.Tilemaps;
 public class TilemapGridManager : MonoBehaviour
 {
     [SerializeField] Tilemap exampleTilemap;
+    [SerializeField] TileBase defaultTile;
     [SerializeField] int width;
     [SerializeField] int height;
 
@@ -41,17 +42,14 @@ public class TilemapGridManager : MonoBehaviour
         {
             for (int j = 0; j < height; j++)
             {
-                tilemap.SetTile(new Vector3Int(i, j, 0), tiles[i][j]);
+                TileBase nextTile = tiles[i][j] ?? defaultTile;
+                tilemap.SetTile(new Vector3Int(i, j, 0), nextTile);
             }
         }
     }
 
-    // Update is called once per frame
-    void Update()
+    public void GenerateNewMap()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            PopulateTilemap(_tilemap);
-        }
+        PopulateTilemap(_tilemap);
     }
 }
