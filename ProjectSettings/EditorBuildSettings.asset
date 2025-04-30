@@ -20,5 +20,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/DOTS_Example.unity
     guid: ab18e49b11f700144bd84ed33e123fe6
+  - enabled: 1
+    path: Assets/Scenes/WaveFunctionCollapseExample.unity
+    guid: 384c9f99b45175741aa7be03ef0ffbea
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

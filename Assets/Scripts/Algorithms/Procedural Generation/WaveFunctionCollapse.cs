@@ -20,10 +20,6 @@ public static class WaveFunctionCollapse
         new int[] { 0, -1 }, // Down
         new int[] { -1, 0 }, // Left
         new int[] { 1, 0 },  // Right
-        new int[] { -1, 1 }, // TopLeft
-        new int[] { 1, 1 },  // TopRight
-        new int[] { -1, -1 }, // BottomLeft
-        new int[] { 1, -1 }  // BottomRight
     };
 
     /// <summary>
@@ -46,9 +42,7 @@ public static class WaveFunctionCollapse
             cells.Push(newLowest);
         }
 
-        int cnt = 0; // Quick and dirty stopping condition
-        int maxCnt = 1000;
-        while (cells.Count > 0 && cnt < maxCnt)
+        while (cells.Count > 0)
         {
             WaveCell currentCell = cells.Pop();
             CollapseWaveCell(currentCell, waveArray);
@@ -59,12 +53,6 @@ public static class WaveFunctionCollapse
             {
                 cells.Push(newLowest);
             }
-            cnt++;
-        }
-
-        if(cnt >= maxCnt)
-        {
-            Debug.Log("Stopped due to count safeguard");
         }
 
         // Create a new TileBase array to store the generated tile arrangement
@@ -75,17 +63,9 @@ public static class WaveFunctionCollapse
             for (int j = 0; j < m; j++)
             {
                 string spriteName = waveArray[i][j].sprite;
-                result[i][j] = GetTileByName(exampleTilemap, spriteName);
+                result[i][j] = spriteName == "NULL" ? null : GetTileByName(exampleTilemap, spriteName);
             }
         }
-
-        // Flip the result array vertically to correct the vertical axis order
-        //for (int i = 0; i < n / 2; i++)
-        //{
-        //    var temp = result[i];
-        //    result[i] = result[n - i - 1];
-        //    result[n - i - 1] = temp;
-        //}
 
         return result;
     }
@@ -135,7 +115,7 @@ public static class WaveFunctionCollapse
             waveArray[i] = new WaveCell[m];
             for (int j = 0; j < m; j++)
             {
-                waveArray[i][j] = new WaveCell(i, j, possibleSprites);
+                waveArray[i][j] = new WaveCell(i, j, possibleSprites.ToArray());
             }
         }
 
@@ -156,14 +136,8 @@ public static class WaveFunctionCollapse
             {
                 string neighborSprite = waveArray[newX][newY].sprite;
                 Direction direction = GetDirection(currentCell.x, currentCell.y, newX, newY);
-                validSprites = validSprites.Intersect(Constraints[neighborSprite][direction]).ToList();// This is overwritten with each iteration.
+                validSprites = validSprites.Intersect(Constraints[neighborSprite][Opposite(direction)]).ToList();
             }
-        }
-
-        if (validSprites.Count == 0)
-        {
-            Debug.LogError("No valid sprites found for cell at (" + currentCell.x + ", " + currentCell.y + ")");
-            return;
         }
 
         // Determine what this cell is allowed to be based on possibilities and weights
@@ -212,7 +186,7 @@ public static class WaveFunctionCollapse
             {
                 string neighborSprite = waveArray[newX][newY].sprite;
                 Direction direction = GetDirection(neighborCell.x, neighborCell.y, newX, newY);
-                allowedSprites.IntersectWith(Constraints[neighborSprite][direction]);
+                allowedSprites.IntersectWith(Constraints[neighborSprite][Opposite(direction)]);
             }
         }
 
@@ -223,13 +197,11 @@ public static class WaveFunctionCollapse
     {
         var adjacencyConstraints = new Dictionary<string, Dictionary<Direction, HashSet<string>>>();
         BoundsInt bounds = exampleTilemap.cellBounds;
-        Debug.Log("Bounds: " + bounds.xMin + ", " + bounds.xMax + ", " + bounds.yMin + ", " + bounds.yMax);
         for (int x = bounds.xMin; x <= bounds.xMax; x++)
         {
             for (int y = bounds.yMin; y <= bounds.yMax; y++)
             {
                 TileBase centerTile = exampleTilemap.GetTile(new Vector3Int(x, y, 0));
-                Debug.Log("Center tile: " + centerTile);
                 if (centerTile == null) continue;
 
                 string centerTileName = centerTile.name;
@@ -247,10 +219,6 @@ public static class WaveFunctionCollapse
                 AddConstraint(adjacencyConstraints, centerTileName, Direction.Down, exampleTilemap.GetTile(new Vector3Int(x, y - 1, 0))?.name);
                 AddConstraint(adjacencyConstraints, centerTileName, Direction.Left, exampleTilemap.GetTile(new Vector3Int(x - 1, y, 0))?.name);
                 AddConstraint(adjacencyConstraints, centerTileName, Direction.Right, exampleTilemap.GetTile(new Vector3Int(x + 1, y, 0))?.name);
-                AddConstraint(adjacencyConstraints, centerTileName, Direction.TopLeft, exampleTilemap.GetTile(new Vector3Int(x - 1, y + 1, 0))?.name);
-                AddConstraint(adjacencyConstraints, centerTileName, Direction.TopRight, exampleTilemap.GetTile(new Vector3Int(x + 1, y + 1, 0))?.name);
-                AddConstraint(adjacencyConstraints, centerTileName, Direction.BottomLeft, exampleTilemap.GetTile(new Vector3Int(x - 1, y - 1, 0))?.name);
-                AddConstraint(adjacencyConstraints, centerTileName, Direction.BottomRight, exampleTilemap.GetTile(new Vector3Int(x + 1, y - 1, 0))?.name);
             }
         }
 
@@ -259,25 +227,27 @@ public static class WaveFunctionCollapse
 
     private static void AddConstraint(Dictionary<string, Dictionary<Direction, HashSet<string>>> constraints, string centerTileName, Direction direction, string adjacentTileName)
     {
-        if (adjacentTileName != null)
-        {
-            constraints[centerTileName][direction].Add(adjacentTileName);
-        }
+        constraints[centerTileName][direction].Add(adjacentTileName ?? "NULL");
     }
 
     private static Direction GetDirection(int x1, int y1, int x2, int y2)
     {
         if (x1 == x2 && y1 == y2 - 1) return Direction.Up;
         if (x1 == x2 && y1 == y2 + 1) return Direction.Down;
-        if (x1 == x2 - 1 && y1 == y2) return Direction.Left;
-        if (x1 == x2 + 1 && y1 == y2) return Direction.Right;
-        if (x1 == x2 - 1 && y1 == y2 + 1) return Direction.TopLeft;
-        if (x1 == x2 + 1 && y1 == y2 + 1) return Direction.TopRight;
-        if (x1 == x2 - 1 && y1 == y2 - 1) return Direction.BottomLeft;
-        if (x1 == x2 + 1 && y1 == y2 - 1) return Direction.BottomRight;
+        if (x1 == x2 + 1 && y1 == y2) return Direction.Left;
+        if (x1 == x2 - 1 && y1 == y2) return Direction.Right;
 
         throw new ArgumentException("Invalid direction");
     }
+
+    private static Direction Opposite(Direction dir) => dir switch
+    {
+        Direction.Up => Direction.Down,
+        Direction.Down => Direction.Up,
+        Direction.Left => Direction.Right,
+        Direction.Right => Direction.Left,
+        _ => dir
+    };
 
     // Helper method to get a TileBase by its name from the example Tilemap
     private static TileBase GetTileByName(Tilemap tilemap, string name)
@@ -325,9 +295,5 @@ public static class WaveFunctionCollapse
         Down,
         Left,
         Right,
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight
     }
 }
